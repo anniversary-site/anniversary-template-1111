@@ -237,7 +237,7 @@ export default function App() {
     if (!SITE_KEY) return
     let active = true
     const fail = cause => { if (active) setError(cause instanceof SiteError ? cause.message : '사이트를 불러오지 못했어요.') }
-    const show = content => { if (active) { setGift(toGift(content, PHOTO_TYPES.map(type => type.frame))); setUnlocked(true) } }
+    const show = content => { if (active) { setGift(toGift(content, PHOTO_TYPES.map(type => type.frame), DECORATIONS.length, SITE_KEY)); setUnlocked(true) } }
     if (PREVIEW_TOKEN) {
       // 운영자 미리보기: 비밀번호 없이 바로 내용을 엽니다.
       getContent(SITE_KEY, PREVIEW_TOKEN).then(show).catch(cause =>
@@ -279,7 +279,7 @@ export default function App() {
     try {
       const token = await unlock(SITE_KEY, value)
       const content = await getContent(SITE_KEY, token)
-      setGift(toGift(content, PHOTO_TYPES.map(type => type.frame)))
+      setGift(toGift(content, PHOTO_TYPES.map(type => type.frame), DECORATIONS.length, SITE_KEY))
       setUnlocked(true)
       setError('')
     } catch (cause) {

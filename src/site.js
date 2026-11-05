@@ -87,17 +87,45 @@ export function forgetToken(siteKey) {
 
 export const getContent = (siteKey, token) => call(`/sites/${siteKey}`, { token })
 
+/** 사이트 키로 정해지는 난수. 같은 사이트는 새로고침해도 같은 배치가 나옵니다. */
+function seededRandom(seed) {
+  let h = 2166136261
+  for (const ch of String(seed)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619)
+  return () => {
+    h = Math.imul(h ^ (h >>> 15), 2246822507)
+    h = Math.imul(h ^ (h >>> 13), 3266489909)
+    return ((h ^= h >>> 16) >>> 0) / 4294967296
+  }
+}
+
 /**
- * 서버 내용을 화면 값으로 바꿉니다. 고객 사진(3~8장)은 photos에 순서대로 담고, 화면의 사진 자리 8곳이 한 장씩 씁니다.
- * 8장보다 적으면 앞에서부터 다시 씁니다. photoTypes는 프레임 이미지(config.js 순서)용입니다.
+ * 고객 사진을 사진 자리 수(slots)만큼 채웁니다. 모든 사진을 한 번씩 쓰고, 남는 자리는 받은 사진 중에서 무작위로 골라
+ * 채운 뒤 섞습니다. 무작위는 사이트 키로 정해져서 새로고침해도 같습니다.
  */
-export function toGift(content, frames) {
+export function fillSlots(photos, slots, seed) {
+  if (!photos.length) return []
+  if (photos.length >= slots) return photos.slice(0, slots)
+  const random = seededRandom(seed)
+  const filled = [...photos]
+  while (filled.length < slots) filled.push(photos[Math.floor(random() * photos.length)])
+  for (let i = filled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1))
+    ;[filled[i], filled[j]] = [filled[j], filled[i]]
+  }
+  return filled
+}
+
+/**
+ * 서버 내용을 화면 값으로 바꿉니다. 고객 사진(3~8장)은 화면의 사진 자리(slots곳)에 한 장씩 들어가고,
+ * 8장보다 적으면 fillSlots로 무작위로 채웁니다. photoTypes는 프레임 이미지(config.js 순서)용입니다.
+ */
+export function toGift(content, frames, slots = 8, seed = '') {
   const photos = (content.documents ?? [])
     .flatMap(document => document.photos ?? [])
     .sort((a, b) => a.documentNo - b.documentNo || a.slot - b.slot)
   return {
     message: content.mainText ?? '',
-    photos: photos.map(photo => ({ photo: photo.url ?? '', caption: photo.caption ?? '' })),
+    photos: fillSlots(photos, slots, seed).map(photo => ({ photo: photo.url ?? '', caption: photo.caption ?? '' })),
     photoTypes: frames.map((frame, index) => {
       const photo = photos.length ? photos[index % photos.length] : null
       return { frame, photo: photo?.url ?? '', caption: photo?.caption ?? '' }
