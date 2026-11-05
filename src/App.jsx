@@ -94,6 +94,10 @@ const DesktopLoginAssetPrefix = `${import.meta.env.BASE_URL}assets`;
 const DesktopLoginimg = `${DesktopLoginAssetPrefix}/login/login.png`;
 const DesktopLoginimg1 = `${DesktopLoginAssetPrefix}/login/input.png`;
 
+// 힌트는 길이가 고객마다 달라서 화면 너비 전체를 기준으로 가운데 맞춥니다. 길면 줄바꿈합니다.
+const HINT_STYLE_DESKTOP = { left: 0, right: 0, textAlign: 'center', whiteSpace: 'normal', padding: '0 80px' }
+const HINT_STYLE_MOBILE = { left: 0, right: 0, alignItems: 'center', textAlign: 'center', whiteSpace: 'normal', padding: '0 24px' }
+
 function DesktopLogin({ password, onPasswordChange, onSubmit, error, hint }) {
   return (
     <div className="background-white position-relative width-100percent" data-node-id="392:662" data-name="암호 입력 배경없">
@@ -107,7 +111,7 @@ function DesktopLogin({ password, onPasswordChange, onSubmit, error, hint }) {
           </div>
         </div>
         <form className="translate-x-center word-break-breakminus-word position-absolute font-family-DungGeunMo line-height-19-5px left-686px font-style-normal color-833f22 font-size-18px text-align-center top-579px white-space-nowrap" data-node-id="403:876" onSubmit={onSubmit} style={{width:290,height:50,left:575,top:565,transform:'none'}}><input className="password-input" aria-label="네 자리 비밀번호" aria-describedby="password-error" aria-invalid={Boolean(error)} type="password" inputMode="numeric" maxLength={4} value={password} onChange={onPasswordChange} placeholder="비밀번호를 입력해주세요." style={{fontSize:18}}/><button className="sr-only">입장하기</button></form>
-        <p className="word-break-breakminus-word position-absolute font-family-DungGeunMo line-height-40px left-576px font-style-normal color-672f1a font-size-24px top-937px white-space-nowrap" data-node-id="403:877">{`비밀번호 hint : ${hint}`}</p>
+        <p className="word-break-breakminus-word position-absolute font-family-DungGeunMo line-height-40px left-576px font-style-normal color-672f1a font-size-24px top-937px white-space-nowrap" data-node-id="403:877" style={HINT_STYLE_DESKTOP}>{`비밀번호 hint : ${hint}`}</p>
       </div><p className="error" id="password-error" role="alert">{error}</p>
     </div>
   );
@@ -131,8 +135,8 @@ function MobileLogin({ password, onPasswordChange, onSubmit, error, hint }) {
         </div>
       </div>
       <form className="translate-y-center word-break-breakminus-word position-absolute display-flex flex-direction-column font-family-DungGeunMo justify-content-center line-height-0 left-132px font-style-normal color-7e3e22 font-size-8px top-447px white-space-nowrap" data-node-id="403:969" onSubmit={onSubmit} style={{width:140,height:30,left:126,top:432,transform:'none'}}><input className="password-input" aria-label="네 자리 비밀번호" aria-describedby="password-error" aria-invalid={Boolean(error)} type="password" inputMode="numeric" maxLength={4} value={password} onChange={onPasswordChange} placeholder="비밀번호를 입력해주세요." style={{fontSize:8,padding:0}}/><button className="sr-only">입장하기</button></form>
-      <div className="translate-y-center word-break-breakminus-word position-absolute display-flex flex-direction-column font-family-DungGeunMo justify-content-center line-height-0 left-109px font-style-normal color-7e3e22 font-size-10px top-815px white-space-nowrap" data-node-id="403:970">
-        <p className="line-height-10px">{`비밀번호 hint : ${hint}`}</p>
+      <div className="translate-y-center word-break-breakminus-word position-absolute display-flex flex-direction-column font-family-DungGeunMo justify-content-center line-height-0 left-109px font-style-normal color-7e3e22 font-size-10px top-815px white-space-nowrap" data-node-id="403:970" style={HINT_STYLE_MOBILE}>
+        <p className="line-height-10px" style={{ lineHeight: '14px' }}>{`비밀번호 hint : ${hint}`}</p>
       </div><p className="error" id="password-error" role="alert">{error}</p>
     </div>
   );
