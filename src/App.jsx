@@ -2,9 +2,16 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { PASSWORD, GIFT_MESSAGE, PASSWORD_HINT, PHOTO_TYPES } from './config'
 import { toBlob } from 'html-to-image'
 import { useBrowserStorage } from './useBrowserStorage'
+import { SiteError, forgetToken, getContent, getLock, savedToken, siteKeyFromLocation, toGift, unlock } from './site'
 import './App.css'
 
 const PhotoPreviewContext = createContext(null)
+// 화면에 보여줄 문구·사진. 데모는 config.js, 고객 사이트는 서버 값입니다.
+const GiftContext = createContext(null)
+const SITE_KEY = siteKeyFromLocation()
+// 꾸미기 상태는 고객 사이트마다 따로 저장합니다.
+const STORAGE_PREFIX = SITE_KEY ? `pepero:v1:${SITE_KEY}:` : 'pepero:v1:'
+const DEMO_GIFT = { message: GIFT_MESSAGE, photoTypes: PHOTO_TYPES }
 const isValidFlavor = value => Number.isInteger(value) && value >= 0 && value < 3
 const isValidPosition = value => value && Number.isFinite(value.x) && Number.isFinite(value.y)
   && Math.abs(value.x) <= 1440 && Math.abs(value.y) <= 1024
@@ -86,7 +93,7 @@ const DesktopLoginAssetPrefix = `${import.meta.env.BASE_URL}assets`;
 const DesktopLoginimg = `${DesktopLoginAssetPrefix}/login/login.png`;
 const DesktopLoginimg1 = `${DesktopLoginAssetPrefix}/login/input.png`;
 
-function DesktopLogin({ password, onPasswordChange, onSubmit, error }) {
+function DesktopLogin({ password, onPasswordChange, onSubmit, error, hint }) {
   return (
     <div className="background-white position-relative width-100percent" data-node-id="392:662" data-name="암호 입력 배경없">
       <div className="position-absolute background-white height-1024px left-0 overflow-clip top-0 width-1440px" data-node-id="397:697" data-name="빼뺴로 화면">
@@ -99,7 +106,7 @@ function DesktopLogin({ password, onPasswordChange, onSubmit, error }) {
           </div>
         </div>
         <form className="translate-x-center word-break-breakminus-word position-absolute font-family-DungGeunMo line-height-19-5px left-686px font-style-normal color-833f22 font-size-18px text-align-center top-579px white-space-nowrap" data-node-id="403:876" onSubmit={onSubmit} style={{width:290,height:50,left:575,top:565,transform:'none'}}><input className="password-input" aria-label="네 자리 비밀번호" aria-describedby="password-error" aria-invalid={Boolean(error)} type="password" inputMode="numeric" maxLength={4} value={password} onChange={onPasswordChange} placeholder="비밀번호를 입력해주세요." style={{fontSize:18}}/><button className="sr-only">입장하기</button></form>
-        <p className="word-break-breakminus-word position-absolute font-family-DungGeunMo line-height-40px left-576px font-style-normal color-672f1a font-size-24px top-937px white-space-nowrap" data-node-id="403:877">{`비밀번호 hint : ${PASSWORD_HINT}`}</p>
+        <p className="word-break-breakminus-word position-absolute font-family-DungGeunMo line-height-40px left-576px font-style-normal color-672f1a font-size-24px top-937px white-space-nowrap" data-node-id="403:877">{`비밀번호 hint : ${hint}`}</p>
       </div><p className="error" id="password-error" role="alert">{error}</p>
     </div>
   );
@@ -109,7 +116,7 @@ const MobileLoginAssetPrefix = `${import.meta.env.BASE_URL}assets`;
 const MobileLoginimg = `${MobileLoginAssetPrefix}/login/login.png`;
 const MobileLoginimg1 = `${MobileLoginAssetPrefix}/login/input.png`;
 
-function MobileLogin({ password, onPasswordChange, onSubmit, error }) {
+function MobileLogin({ password, onPasswordChange, onSubmit, error, hint }) {
   return (
     <div className="background-white position-relative width-100percent" data-node-id="403:964" data-name="모바일 배경없">
       <div className="position-absolute display-contents left-55px top-299px" data-node-id="403:966" data-name="비밀번호 창">
@@ -124,7 +131,7 @@ function MobileLogin({ password, onPasswordChange, onSubmit, error }) {
       </div>
       <form className="translate-y-center word-break-breakminus-word position-absolute display-flex flex-direction-column font-family-DungGeunMo justify-content-center line-height-0 left-132px font-style-normal color-7e3e22 font-size-8px top-447px white-space-nowrap" data-node-id="403:969" onSubmit={onSubmit} style={{width:140,height:30,left:126,top:432,transform:'none'}}><input className="password-input" aria-label="네 자리 비밀번호" aria-describedby="password-error" aria-invalid={Boolean(error)} type="password" inputMode="numeric" maxLength={4} value={password} onChange={onPasswordChange} placeholder="비밀번호를 입력해주세요." style={{fontSize:8,padding:0}}/><button className="sr-only">입장하기</button></form>
       <div className="translate-y-center word-break-breakminus-word position-absolute display-flex flex-direction-column font-family-DungGeunMo justify-content-center line-height-0 left-109px font-style-normal color-7e3e22 font-size-10px top-815px white-space-nowrap" data-node-id="403:970">
-        <p className="line-height-10px">{`비밀번호 hint : ${PASSWORD_HINT}`}</p>
+        <p className="line-height-10px">{`비밀번호 hint : ${hint}`}</p>
       </div><p className="error" id="password-error" role="alert">{error}</p>
     </div>
   );
@@ -155,13 +162,15 @@ function DecorationImage({ decoration, mobile, index }) {
   const radians = Math.abs(angle) * Math.PI / 180
   const boxWidth = width * Math.cos(radians) + height * Math.sin(radians)
   const boxHeight = height * Math.cos(radians) + width * Math.sin(radians)
-  const type = PHOTO_TYPES[decoration.type]
+  const type = useContext(GiftContext).photoTypes[decoration.type]
   const caption = Array.from(type.caption ?? '').slice(0, 10).join('')
-  return <DraggablePhoto caption={caption} storageKey={`pepero:v1:photo:${mobile ? 'mobile' : 'desktop'}:${index}`}>
+  // 서버 사진은 전체 주소, 데모 사진은 public/assets/photo/의 파일 이름입니다.
+  const photoSrc = /^(https?:)?\/\//.test(type.photo) ? type.photo : `${ASSET_PREFIX}/photo/${type.photo}`
+  return <DraggablePhoto caption={caption} storageKey={`${STORAGE_PREFIX}photo:${mobile ? 'mobile' : 'desktop'}:${index}`}>
     <div className="photo-slot" style={{ left: x, top: y, width: boxWidth, height: boxHeight }}>
       <div className="photo-frame" style={{ width, height, transform: `rotate(${angle}deg)` }}>
         <img className="photo-paper" src={`${ASSET_PREFIX}/frame/${type.frame}`} alt="" />
-        <img className="photo-picture" src={`${ASSET_PREFIX}/photo/${type.photo}`} alt="" />
+        {type.photo && <img className="photo-picture" src={photoSrc} alt="" crossOrigin={photoSrc.startsWith('http') ? 'anonymous' : undefined} />}
       </div>
       {caption && <span className="photo-caption" data-export-exclude>{caption}</span>}
     </div>
@@ -169,8 +178,9 @@ function DecorationImage({ decoration, mobile, index }) {
 }
 
 function Gift({ flavor, setFlavor, mobile }) {
+  const { message } = useContext(GiftContext)
   return <section className={`gift-screen ${mobile ? 'gift-mobile' : 'gift-desktop'}`} aria-label="빼빼로 꾸미기">
-    <p className="gift-message">{GIFT_MESSAGE}</p>
+    <p className="gift-message">{message}</p>
     <div className="gift-sticks" aria-label="교차한 빼빼로">
       {[0, 1].map(index => <div key={index} className={`gift-stick gift-stick-${index}`}>
         <img src={`${ASSET_PREFIX}/pepero/${FLAVORS[flavor].image}`} alt="" />
@@ -206,11 +216,29 @@ export default function App() {
   const [password, setPassword] = useState('')
   const [unlocked, setUnlocked] = useState(false)
   const [error, setError] = useState('')
-  const [flavor, setFlavor] = useBrowserStorage('pepero:v1:flavor', 0, isValidFlavor)
+  const [flavor, setFlavor] = useBrowserStorage(`${STORAGE_PREFIX}flavor`, 0, isValidFlavor)
+  const [gift, setGift] = useState(SITE_KEY ? null : DEMO_GIFT)
+  const [hint, setHint] = useState(SITE_KEY ? '' : PASSWORD_HINT)
+  const [checking, setChecking] = useState(false)
   const [preview, setPreview] = useState(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const giftCanvas = useRef(null)
+
+  // 고객 사이트: 잠금 화면 힌트를 받고, 이미 연 적이 있으면 바로 엽니다.
+  useEffect(() => {
+    if (!SITE_KEY) return
+    let active = true
+    const fail = cause => { if (active) setError(cause instanceof SiteError ? cause.message : '사이트를 불러오지 못했어요.') }
+    getLock(SITE_KEY).then(lock => { if (active) setHint(lock.passwordHint ?? '') }).catch(fail)
+    const token = savedToken(SITE_KEY)
+    if (token) {
+      getContent(SITE_KEY, token)
+        .then(content => { if (active) { setGift(toGift(content, PHOTO_TYPES.map(type => type.frame))); setUnlocked(true) } })
+        .catch(cause => { forgetToken(SITE_KEY); if (cause instanceof SiteError && cause.status !== 401) fail(cause) })
+    }
+    return () => { active = false }
+  }, [])
 
   useEffect(() => {
     const resize = () => setViewport({ width: window.innerWidth, height: window.innerHeight })
@@ -223,13 +251,27 @@ export default function App() {
   const height = mobile ? 852 : 1024
   // 맛 선택 위 경계를 사진 이동과 이미지 저장에 공통으로 사용합니다.
   const decorationHeight = mobile ? 763 : 927
-  const totalHeight = height + (unlocked ? 90 : 0)
+  const totalHeight = height + (unlocked && gift ? 90 : 0)
   const scale = mobile ? viewport.width / width : Math.min(viewport.width / width, viewport.height / totalHeight)
 
-  function check(value) {
-    if (value.length !== 4) return
-    if (value === PASSWORD) { setUnlocked(true); setError('') }
-    else { setPassword(''); setError('비밀번호가 달라요. 다시 입력해주세요.') }
+  function wrongPassword() { setPassword(''); setError('비밀번호가 달라요. 다시 입력해주세요.') }
+  async function check(value) {
+    if (value.length !== 4 || checking) return
+    if (!SITE_KEY) {
+      if (value === PASSWORD) { setUnlocked(true); setError('') } else wrongPassword()
+      return
+    }
+    setChecking(true)
+    try {
+      const token = await unlock(SITE_KEY, value)
+      const content = await getContent(SITE_KEY, token)
+      setGift(toGift(content, PHOTO_TYPES.map(type => type.frame)))
+      setUnlocked(true)
+      setError('')
+    } catch (cause) {
+      if (cause instanceof SiteError && cause.code === 'WRONG_SITE_PASSWORD') wrongPassword()
+      else { setPassword(''); setError(cause instanceof SiteError ? cause.message : '사이트를 열지 못했어요.') }
+    } finally { setChecking(false) }
   }
   function onPasswordChange(event) {
     const value = event.target.value.replace(/\D/g, '').slice(0, 4)
@@ -263,21 +305,21 @@ export default function App() {
     } finally { setSaving(false) }
   }
 
-  const Screen = unlocked ? Gift : (mobile ? MobileLogin : DesktopLogin)
-  return <PhotoPreviewContext.Provider value={setPreview}>
+  const Screen = unlocked && gift ? Gift : (mobile ? MobileLogin : DesktopLogin)
+  return <GiftContext.Provider value={gift ?? DEMO_GIFT}><PhotoPreviewContext.Provider value={setPreview}>
     <main className="viewport" style={{ minHeight: Math.max(viewport.height, totalHeight * scale) }}>
       <p id="decoration-help" className="sr-only">사진을 드래그해서 빼빼로를 꾸며보세요. 우클릭 또는 두 번 탭하면 크게 볼 수 있습니다. 방향키로 이동하고 Enter로 크게 볼 수도 있습니다.</p>
       <div className="stage" style={{ width, height: totalHeight, left: (viewport.width - width * scale) / 2, transform: `scale(${scale})` }}>
         <div ref={giftCanvas} className="gift-canvas" data-decoration-height={decorationHeight} style={{ width, height }}>
           <Screen mobile={mobile} password={password} error={error} onPasswordChange={onPasswordChange}
-            onSubmit={event => { event.preventDefault(); check(password) }} flavor={flavor} setFlavor={setFlavor} />
+            onSubmit={event => { event.preventDefault(); check(password) }} flavor={flavor} setFlavor={setFlavor} hint={hint} />
         </div>
-        {unlocked && <div className="save-controls" style={{ top: height + 12 }}>
+        {unlocked && gift && <div className="save-controls" style={{ top: height + 12 }}>
           <button className="save-button" type="button" onClick={saveGift} disabled={saving}>{saving ? '이미지 만드는 중…' : '저장하기'}</button>
           <p className="save-error" role="status">{saveError}</p>
         </div>}
       </div>
     </main>
     {preview && <PhotoPreview src={preview} onClose={() => setPreview(null)} />}
-  </PhotoPreviewContext.Provider>
+  </PhotoPreviewContext.Provider></GiftContext.Provider>
 }
