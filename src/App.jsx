@@ -11,7 +11,8 @@ const GiftContext = createContext(null)
 const SITE_KEY = siteKeyFromLocation()
 const PREVIEW_TOKEN = previewTokenFromLocation(SITE_KEY)
 // 꾸미기 상태는 고객 사이트마다 따로 저장합니다.
-const STORAGE_PREFIX = SITE_KEY ? `pepero:v1:${SITE_KEY}:` : 'pepero:v1:'
+// 관리자 미리보기는 꾸민 상태를 불러오지도 저장하지도 않아 항상 처음 배치로 열립니다.
+const STORAGE_PREFIX = PREVIEW_TOKEN ? null : SITE_KEY ? `pepero:v1:${SITE_KEY}:` : 'pepero:v1:'
 const DEMO_GIFT = { message: GIFT_MESSAGE, photoTypes: PHOTO_TYPES }
 const isValidFlavor = value => Number.isInteger(value) && value >= 0 && value < 3
 const isValidPosition = value => value && Number.isFinite(value.x) && Number.isFinite(value.y)
@@ -173,7 +174,7 @@ function DecorationImage({ decoration, mobile, index }) {
   const caption = Array.from(type.caption ?? '').slice(0, 10).join('')
   // 서버 사진은 전체 주소, 데모 사진은 public/assets/photo/의 파일 이름입니다.
   const photoSrc = /^(https?:)?\/\//.test(type.photo) ? type.photo : `${ASSET_PREFIX}/photo/${type.photo}`
-  return <DraggablePhoto caption={caption} storageKey={`${STORAGE_PREFIX}photo:${mobile ? 'mobile' : 'desktop'}:${index}`}>
+  return <DraggablePhoto caption={caption} storageKey={STORAGE_PREFIX && `${STORAGE_PREFIX}photo:${mobile ? 'mobile' : 'desktop'}:${index}`}>
     <div className="photo-slot" style={{ left: x, top: y, width: boxWidth, height: boxHeight }}>
       <div className="photo-frame" style={{ width, height, transform: `rotate(${angle}deg)` }}>
         <img className="photo-paper" src={`${ASSET_PREFIX}/frame/${type.frame}`} alt="" />
@@ -223,7 +224,7 @@ export default function App() {
   const [password, setPassword] = useState('')
   const [unlocked, setUnlocked] = useState(false)
   const [error, setError] = useState('')
-  const [flavor, setFlavor] = useBrowserStorage(`${STORAGE_PREFIX}flavor`, 0, isValidFlavor)
+  const [flavor, setFlavor] = useBrowserStorage(STORAGE_PREFIX && `${STORAGE_PREFIX}flavor`, 0, isValidFlavor)
   const [gift, setGift] = useState(SITE_KEY ? null : DEMO_GIFT)
   const [hint, setHint] = useState(SITE_KEY ? '' : PASSWORD_HINT)
   const [checking, setChecking] = useState(false)
