@@ -12,6 +12,26 @@ export function siteKeyFromLocation(location = window.location) {
   return SITE_KEY.test(query ?? '') ? query : null
 }
 
+/**
+ * 운영자 미리보기: 관리자 화면이 연 주소 끝의 #preview={토큰}. 주소창에서는 바로 지워 다른 사람에게 복사되지 않게 하고,
+ * 새로고침해도 이어지도록 이 탭에만 기억합니다. 토큰은 30분 뒤 서버가 거절합니다.
+ */
+export function previewTokenFromLocation(siteKey, location = window.location) {
+  if (!siteKey) return null
+  const key = `pepero:v1:preview:${siteKey}`
+  const fromHash = new URLSearchParams(location.hash.slice(1)).get('preview')
+  try {
+    if (fromHash) {
+      sessionStorage.setItem(key, fromHash)
+      history.replaceState(null, '', location.pathname + location.search)
+      return fromHash
+    }
+    return sessionStorage.getItem(key)
+  } catch {
+    return fromHash
+  }
+}
+
 export class SiteError extends Error {
   constructor(status, code, message) {
     super(message)

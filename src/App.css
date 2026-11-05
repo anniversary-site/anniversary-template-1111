@@ -693,3 +693,21 @@ p {
   color: #7e3e22;
   font-size: 28px;
 }
+
+/* 운영자 미리보기 안내 (고객 화면에는 나오지 않음) */
+.admin-preview-banner {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  z-index: 1000;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 16px;
+  max-width: calc(100vw - 32px);
+  border-radius: 999px;
+  background: rgba(30, 30, 30, 0.85);
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+  pointer-events: none;
+}

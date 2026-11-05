@@ -2,13 +2,14 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { PASSWORD, GIFT_MESSAGE, PASSWORD_HINT, PHOTO_TYPES } from './config'
 import { toBlob } from 'html-to-image'
 import { useBrowserStorage } from './useBrowserStorage'
-import { SiteError, forgetToken, getContent, getLock, savedToken, siteKeyFromLocation, toGift, unlock } from './site'
+import { SiteError, forgetToken, getContent, getLock, previewTokenFromLocation, savedToken, siteKeyFromLocation, toGift, unlock } from './site'
 import './App.css'
 
 const PhotoPreviewContext = createContext(null)
 // 화면에 보여줄 문구·사진. 데모는 config.js, 고객 사이트는 서버 값입니다.
 const GiftContext = createContext(null)
 const SITE_KEY = siteKeyFromLocation()
+const PREVIEW_TOKEN = previewTokenFromLocation(SITE_KEY)
 // 꾸미기 상태는 고객 사이트마다 따로 저장합니다.
 const STORAGE_PREFIX = SITE_KEY ? `pepero:v1:${SITE_KEY}:` : 'pepero:v1:'
 const DEMO_GIFT = { message: GIFT_MESSAGE, photoTypes: PHOTO_TYPES }
@@ -230,11 +231,18 @@ export default function App() {
     if (!SITE_KEY) return
     let active = true
     const fail = cause => { if (active) setError(cause instanceof SiteError ? cause.message : '사이트를 불러오지 못했어요.') }
+    const show = content => { if (active) { setGift(toGift(content, PHOTO_TYPES.map(type => type.frame))); setUnlocked(true) } }
+    if (PREVIEW_TOKEN) {
+      // 운영자 미리보기: 비밀번호 없이 바로 내용을 엽니다.
+      getContent(SITE_KEY, PREVIEW_TOKEN).then(show).catch(cause =>
+        fail(cause instanceof SiteError && cause.status === 401 ? new SiteError(401, cause.code, '미리보기 링크가 만료됐어요. 관리자 화면에서 다시 열어주세요.') : cause))
+      return () => { active = false }
+    }
     getLock(SITE_KEY).then(lock => { if (active) setHint(lock.passwordHint ?? '') }).catch(fail)
     const token = savedToken(SITE_KEY)
     if (token) {
       getContent(SITE_KEY, token)
-        .then(content => { if (active) { setGift(toGift(content, PHOTO_TYPES.map(type => type.frame))); setUnlocked(true) } })
+        .then(show)
         .catch(cause => { forgetToken(SITE_KEY); if (cause instanceof SiteError && cause.status !== 401) fail(cause) })
     }
     return () => { active = false }
@@ -320,6 +328,7 @@ export default function App() {
         </div>}
       </div>
     </main>
+    {PREVIEW_TOKEN && <p className="admin-preview-banner" role="status">관리자 미리보기 · 고객에게는 비밀번호 화면부터 보여요{error ? ` · ${error}` : ''}</p>}
     {preview && <PhotoPreview src={preview} onClose={() => setPreview(null)} />}
   </PhotoPreviewContext.Provider></GiftContext.Provider>
 }
