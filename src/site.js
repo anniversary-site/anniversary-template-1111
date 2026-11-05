@@ -88,8 +88,8 @@ export function forgetToken(siteKey) {
 export const getContent = (siteKey, token) => call(`/sites/${siteKey}`, { token })
 
 /**
- * 서버 내용을 화면 값으로 바꿉니다. 빼빼로 화면은 사진 칸이 3개라 앞의 3장을 씁니다.
- * frames는 config.js의 프레임 이미지 순서를 그대로 씁니다.
+ * 서버 내용을 화면 값으로 바꿉니다. 고객 사진(3~8장)은 photos에 순서대로 담고, 화면의 사진 자리 8곳이 한 장씩 씁니다.
+ * 8장보다 적으면 앞에서부터 다시 씁니다. photoTypes는 프레임 이미지(config.js 순서)용입니다.
  */
 export function toGift(content, frames) {
   const photos = (content.documents ?? [])
@@ -97,6 +97,7 @@ export function toGift(content, frames) {
     .sort((a, b) => a.documentNo - b.documentNo || a.slot - b.slot)
   return {
     message: content.mainText ?? '',
+    photos: photos.map(photo => ({ photo: photo.url ?? '', caption: photo.caption ?? '' })),
     photoTypes: frames.map((frame, index) => {
       const photo = photos.length ? photos[index % photos.length] : null
       return { frame, photo: photo?.url ?? '', caption: photo?.caption ?? '' }

@@ -167,7 +167,9 @@ function DecorationImage({ decoration, mobile, index }) {
   const radians = Math.abs(angle) * Math.PI / 180
   const boxWidth = width * Math.cos(radians) + height * Math.sin(radians)
   const boxHeight = height * Math.cos(radians) + width * Math.sin(radians)
-  const type = useContext(GiftContext).photoTypes[decoration.type]
+  const gift = useContext(GiftContext)
+  // 프레임은 자리마다 정해져 있고, 고객 사진이 있으면 자리마다 다른 사진을 넣습니다.
+  const type = { ...gift.photoTypes[decoration.type], ...(gift.photos?.length ? gift.photos[index % gift.photos.length] : {}) }
   const caption = Array.from(type.caption ?? '').slice(0, 10).join('')
   // 서버 사진은 전체 주소, 데모 사진은 public/assets/photo/의 파일 이름입니다.
   const photoSrc = /^(https?:)?\/\//.test(type.photo) ? type.photo : `${ASSET_PREFIX}/photo/${type.photo}`
