@@ -12,7 +12,7 @@ const SITE_KEY = siteKeyFromLocation()
 const PREVIEW_TOKEN = previewTokenFromLocation(SITE_KEY)
 // 꾸미기 상태는 고객 사이트마다 따로 저장합니다.
 // 관리자 미리보기는 꾸민 상태를 불러오지도 저장하지도 않아 항상 처음 배치로 열립니다.
-const STORAGE_PREFIX = PREVIEW_TOKEN ? null : SITE_KEY ? `pepero:v1:${SITE_KEY}:` : 'pepero:v1:'
+const STORAGE_PREFIX = PREVIEW_TOKEN ? null : SITE_KEY ? `pepero:site:${SITE_KEY}:` : 'pepero:v1:'
 const DEMO_GIFT = { message: GIFT_MESSAGE, photoTypes: PHOTO_TYPES }
 const isValidFlavor = value => Number.isInteger(value) && value >= 0 && value < 3
 const isValidPosition = value => value && Number.isFinite(value.x) && Number.isFinite(value.y)
