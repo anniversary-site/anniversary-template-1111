@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/:siteKey([a-km-np-z2-9]{12})", "destination": "/index.html" }
+  ]
+}
