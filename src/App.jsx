@@ -99,7 +99,7 @@ const DesktopLoginimg1 = `${DesktopLoginAssetPrefix}/login/input.png`;
 const HINT_STYLE_DESKTOP = { left: 0, right: 0, textAlign: 'center', whiteSpace: 'normal', padding: '0 80px' }
 const HINT_STYLE_MOBILE = { left: 0, right: 0, alignItems: 'center', textAlign: 'center', whiteSpace: 'normal', padding: '0 24px' }
 
-function DesktopLogin({ password, onPasswordChange, onSubmit, error, hint }) {
+function DesktopLogin({ password, onPasswordChange, onSubmit, error, hint, onSkip }) {
   return (
     <div className="background-white position-relative width-100percent" data-node-id="392:662" data-name="암호 입력 배경없">
       <div className="position-absolute background-white height-1024px left-0 overflow-clip top-0 width-1440px" data-node-id="397:697" data-name="빼뺴로 화면">
@@ -113,16 +113,24 @@ function DesktopLogin({ password, onPasswordChange, onSubmit, error, hint }) {
         </div>
         <form className="translate-x-center word-break-breakminus-word position-absolute font-family-DungGeunMo line-height-19-5px left-686px font-style-normal color-833f22 font-size-18px text-align-center top-579px white-space-nowrap" data-node-id="403:876" onSubmit={onSubmit} style={{width:290,height:50,left:575,top:565,transform:'none'}}><input className="password-input" aria-label="네 자리 비밀번호" aria-describedby="password-error" aria-invalid={Boolean(error)} type="password" inputMode="numeric" maxLength={4} value={password} onChange={onPasswordChange} placeholder="비밀번호를 입력해주세요." style={{fontSize:18}}/><button className="sr-only">입장하기</button></form>
         <p className="word-break-breakminus-word position-absolute font-family-DungGeunMo line-height-40px left-576px font-style-normal color-672f1a font-size-24px top-937px white-space-nowrap" data-node-id="403:877" style={HINT_STYLE_DESKTOP}>{`비밀번호 hint : ${hint}`}</p>
+        {onSkip && <DemoSkip onSkip={onSkip} style={{ top: 770, fontSize: 18 }} />}
       </div><p className="error" id="password-error" role="alert">{error}</p>
     </div>
   );
+}
+
+// 데모 화면에서만 보이는 우회 버튼입니다. 고객 사이트(사이트키 주소)에는 나오지 않습니다.
+function DemoSkip({ onSkip, style }) {
+  return <div className="demo-skip" style={{ top: style.top }}>
+    <button className="demo-skip-button" type="button" onClick={onSkip} style={{ fontSize: style.fontSize }}>비밀번호 없이 둘러보기 ▶</button>
+  </div>
 }
 
 const MobileLoginAssetPrefix = `${import.meta.env.BASE_URL}assets`;
 const MobileLoginimg = `${MobileLoginAssetPrefix}/login/login.png`;
 const MobileLoginimg1 = `${MobileLoginAssetPrefix}/login/input.png`;
 
-function MobileLogin({ password, onPasswordChange, onSubmit, error, hint }) {
+function MobileLogin({ password, onPasswordChange, onSubmit, error, hint, onSkip }) {
   return (
     <div className="background-white position-relative width-100percent" data-node-id="403:964" data-name="모바일 배경없">
       <div className="position-absolute display-contents left-55px top-299px" data-node-id="403:966" data-name="비밀번호 창">
@@ -138,7 +146,9 @@ function MobileLogin({ password, onPasswordChange, onSubmit, error, hint }) {
       <form className="translate-y-center word-break-breakminus-word position-absolute display-flex flex-direction-column font-family-DungGeunMo justify-content-center line-height-0 left-132px font-style-normal color-7e3e22 font-size-8px top-447px white-space-nowrap" data-node-id="403:969" onSubmit={onSubmit} style={{width:140,height:30,left:126,top:432,transform:'none'}}><input className="password-input" aria-label="네 자리 비밀번호" aria-describedby="password-error" aria-invalid={Boolean(error)} type="password" inputMode="numeric" maxLength={4} value={password} onChange={onPasswordChange} placeholder="비밀번호를 입력해주세요." style={{fontSize:8,padding:0}}/><button className="sr-only">입장하기</button></form>
       <div className="translate-y-center word-break-breakminus-word position-absolute display-flex flex-direction-column font-family-DungGeunMo justify-content-center line-height-0 left-109px font-style-normal color-7e3e22 font-size-10px top-815px white-space-nowrap" data-node-id="403:970" style={HINT_STYLE_MOBILE}>
         <p className="line-height-10px" style={{ lineHeight: '14px' }}>{`비밀번호 hint : ${hint}`}</p>
-      </div><p className="error" id="password-error" role="alert">{error}</p>
+      </div>
+      {onSkip && <DemoSkip onSkip={onSkip} style={{ top: 545, fontSize: 12 }} />}
+      <p className="error" id="password-error" role="alert">{error}</p>
     </div>
   );
 }
@@ -327,7 +337,8 @@ export default function App() {
       <div className="stage" style={{ width, height: totalHeight, left: (viewport.width - width * scale) / 2, transform: `scale(${scale})` }}>
         <div ref={giftCanvas} className="gift-canvas" data-decoration-height={decorationHeight} style={{ width, height }}>
           <Screen mobile={mobile} password={password} error={error} onPasswordChange={onPasswordChange}
-            onSubmit={event => { event.preventDefault(); check(password) }} flavor={flavor} setFlavor={setFlavor} hint={hint} />
+            onSubmit={event => { event.preventDefault(); check(password) }} flavor={flavor} setFlavor={setFlavor} hint={hint}
+            onSkip={SITE_KEY ? undefined : () => { setUnlocked(true); setError('') }} />
         </div>
         {unlocked && gift && <div className="save-controls" style={{ top: height + 12 }}>
           <button className="save-button" type="button" onClick={saveGift} disabled={saving}>{saving ? '이미지 만드는 중…' : '저장하기'}</button>
