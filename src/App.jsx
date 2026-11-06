@@ -232,7 +232,10 @@ function PhotoPreview({ src, onClose }) {
 // 아이폰·아이패드: 파일 다운로드 대신 완성 이미지를 띄워 공유 시트의 '이미지 저장'으로 사진 앱에 넣게 합니다.
 const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 // Safari는 html-to-image(SVG 방식) 결과에서 그림·사진이 빠져서 html2canvas(캔버스에 직접 그림)로 만듭니다.
-const SAFARI = /^((?!chrome|crios|fxios|android).)*safari/i.test(navigator.userAgent)
+// 아이폰은 크롬·카카오톡 등 모든 브라우저가 Safari 엔진이라 IOS도 함께 봅니다.
+const SAFARI = IOS || /^((?!chrome|crios|fxios|android).)*safari/i.test(navigator.userAgent)
+// 카카오톡·인스타그램·네이버 등 앱 안 브라우저는 파일 다운로드가 막히는 일이 많아서 아이폰처럼 이미지를 띄워 줍니다.
+const IN_APP = /KAKAOTALK|Instagram|FBAN|FBAV|NAVER\(|Line\/|DaumApps|everytimeApp/i.test(navigator.userAgent)
 
 function SavedImage({ image, onClose }) {
   const dialog = useRef(null)
@@ -356,7 +359,7 @@ export default function App() {
       })
       if (!blob) throw new Error('이미지 생성 실패')
       const url = URL.createObjectURL(blob)
-      if (IOS) {
+      if (IOS || IN_APP) {
         setSavedImage({ url, file: new File([blob], 'pepero-decoration.png', { type: 'image/png' }) })
         return
       }
