@@ -231,7 +231,7 @@ function PhotoPreview({ src, onClose }) {
 
 // 아이폰·아이패드: 파일 다운로드 대신 완성 이미지를 띄워 공유 시트의 '이미지 저장'으로 사진 앱에 넣게 합니다.
 const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-// Safari는 html-to-image 첫 결과에서 사진이 빠지는 일이 잦아서 한 번 미리 그린 뒤 다시 그립니다.
+// Safari는 html-to-image(SVG 방식) 결과에서 그림·사진이 빠져서 html2canvas(캔버스에 직접 그림)로 만듭니다.
 const SAFARI = /^((?!chrome|crios|fxios|android).)*safari/i.test(navigator.userAgent)
 
 function SavedImage({ image, onClose }) {
@@ -332,6 +332,16 @@ export default function App() {
     setError('')
     check(value)
   }
+  async function safariBlob() {
+    const { default: html2canvas } = await import('html2canvas')
+    const canvas = await html2canvas(giftCanvas.current, {
+      width, height: decorationHeight, scale: 2, backgroundColor: '#fff', useCORS: true, logging: false,
+      ignoreElements: node => node.hasAttribute?.('data-export-exclude'),
+      // 화면 맞춤 축소(scale)를 풀어 원래 크기로 그립니다.
+      onclone: doc => { const stage = doc.querySelector('.stage'); if (stage) stage.style.transform = 'none' },
+    })
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
+  }
   async function saveGift() {
     if (saving) return
     setSaving(true)
@@ -339,13 +349,11 @@ export default function App() {
     try {
       await document.fonts.ready
       await Promise.all([...giftCanvas.current.querySelectorAll('img')].map(image => image.decode()))
-      const options = {
+      const blob = SAFARI ? await safariBlob() : await toBlob(giftCanvas.current, {
         width, height: decorationHeight, pixelRatio: 2, backgroundColor: '#fff',
         style: { transform: 'none', height: `${decorationHeight}px`, overflow: 'hidden' },
         filter: node => !(node instanceof HTMLElement && node.hasAttribute('data-export-exclude')),
-      }
-      if (SAFARI) await toBlob(giftCanvas.current, options)
-      const blob = await toBlob(giftCanvas.current, options)
+      })
       if (!blob) throw new Error('이미지 생성 실패')
       const url = URL.createObjectURL(blob)
       if (IOS) {
