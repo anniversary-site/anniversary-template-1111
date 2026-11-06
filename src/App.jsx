@@ -229,13 +229,14 @@ function PhotoPreview({ src, onClose }) {
   </dialog>
 }
 
-// 아이폰·아이패드: 파일 다운로드 대신 완성 이미지를 띄워 공유 시트의 '이미지 저장'으로 사진 앱에 넣게 합니다.
+// 모바일은 다운로드 대신 완성 이미지를 띄우고 공유하기만 제공합니다(아이폰은 웹에서 앨범 저장이 안 됨). PC는 다운로드.
 const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 // Safari는 html-to-image(SVG 방식) 결과에서 그림·사진이 빠져서 html2canvas(캔버스에 직접 그림)로 만듭니다.
 // 아이폰은 크롬·카카오톡 등 모든 브라우저가 Safari 엔진이라 IOS도 함께 봅니다.
 const SAFARI = IOS || /^((?!chrome|crios|fxios|android).)*safari/i.test(navigator.userAgent)
-// 카카오톡·인스타그램·네이버 등 앱 안 브라우저는 파일 다운로드가 막히는 일이 많아서 아이폰처럼 이미지를 띄워 줍니다.
+// 카카오톡·인스타그램·네이버 등 앱 안 브라우저는 파일 다운로드가 막히는 일이 많아서 모바일로 봅니다.
 const IN_APP = /KAKAOTALK|Instagram|FBAN|FBAV|NAVER\(|Line\/|DaumApps|everytimeApp/i.test(navigator.userAgent)
+const MOBILE = IOS || IN_APP || /Android|Mobi/i.test(navigator.userAgent)
 
 function SavedImage({ image, onClose }) {
   const dialog = useRef(null)
@@ -245,15 +246,16 @@ function SavedImage({ image, onClose }) {
   async function share() {
     setError('')
     try { await navigator.share({ files: [image.file] }) }
-    catch (cause) { if (cause?.name !== 'AbortError') setError(`앨범에 저장하지 못했어요(${cause?.name ?? '오류'}). 이미지를 길게 눌러 저장해주세요.`) }
+    catch (cause) { if (cause?.name !== 'AbortError') setError(`공유하지 못했어요(${cause?.name ?? '오류'}). 다시 시도해주세요.`) }
   }
-  return <dialog ref={dialog} className="photo-preview saved-image" aria-label="저장할 이미지"
+  return <dialog ref={dialog} className="photo-preview saved-image" aria-label="공유할 이미지"
     onCancel={onClose} onClick={event => { if (event.target === event.currentTarget) onClose() }}>
     <div className="photo-preview-content">
       <button className="preview-close" type="button" onClick={onClose} aria-label="닫기">×</button>
       <img src={image.url} alt="꾸민 빼빼로 이미지" />
-      {canShare && <button className="save-button" type="button" onClick={share} autoFocus>앨범에 저장하기</button>}
-      <p className="saved-image-help">{canShare ? "'앨범에 저장하기'를 누른 뒤 뜨는 메뉴에서 '이미지 저장'을 골라주세요. " : ''}이미지를 길게 눌러 '사진 앱에 저장'할 수도 있어요.</p>
+      {canShare
+        ? <button className="save-button" type="button" onClick={share} autoFocus>공유하기</button>
+        : <p className="saved-image-help">이 브라우저에서는 공유할 수 없어요. Safari나 크롬에서 열어주세요.</p>}
       <p className="save-error" role="status">{error}</p>
     </div>
   </dialog>
@@ -359,7 +361,7 @@ export default function App() {
       })
       if (!blob) throw new Error('이미지 생성 실패')
       const url = URL.createObjectURL(blob)
-      if (IOS || IN_APP) {
+      if (MOBILE) {
         setSavedImage({ url, file: new File([blob], 'pepero-decoration.png', { type: 'image/png' }) })
         return
       }
@@ -386,7 +388,7 @@ export default function App() {
             onSkip={SITE_KEY ? undefined : () => { setUnlocked(true); setError('') }} />
         </div>
         {unlocked && gift && <div className="save-controls" style={{ top: height + 12 }}>
-          <button className="save-button" type="button" onClick={saveGift} disabled={saving}>{saving ? '이미지 만드는 중…' : '저장하기'}</button>
+          <button className="save-button" type="button" onClick={saveGift} disabled={saving}>{saving ? '이미지 만드는 중…' : MOBILE ? '공유하기' : '저장하기'}</button>
           <p className="save-error" role="status">{saveError}</p>
         </div>}
       </div>
