@@ -712,6 +712,30 @@ p {
   font-size: 28px;
 }
 
+/* 아이폰 저장: 완성 이미지 + 사진에 저장하기 */
+.saved-image .photo-preview-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 92vw;
+}
+
+.saved-image img {
+  width: min(80vw, 640px);
+  height: auto;
+  max-height: 60dvh;
+  -webkit-touch-callout: default;
+  user-select: auto;
+}
+
+.saved-image-help {
+  margin: 0;
+  color: #7e3e22;
+  font-size: 13px;
+  text-align: center;
+}
+
 /* 운영자 미리보기 안내 (고객 화면에는 나오지 않음) */
 .admin-preview-banner {
   position: fixed;

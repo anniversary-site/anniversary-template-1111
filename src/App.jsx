@@ -229,6 +229,33 @@ function PhotoPreview({ src, onClose }) {
   </dialog>
 }
 
+// 아이폰·아이패드: 파일 다운로드 대신 완성 이미지를 띄워 공유 시트의 '이미지 저장'으로 사진 앱에 넣게 합니다.
+const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+// Safari는 html-to-image 첫 결과에서 사진이 빠지는 일이 잦아서 한 번 미리 그린 뒤 다시 그립니다.
+const SAFARI = /^((?!chrome|crios|fxios|android).)*safari/i.test(navigator.userAgent)
+
+function SavedImage({ image, onClose }) {
+  const dialog = useRef(null)
+  const [error, setError] = useState('')
+  useEffect(() => { dialog.current.showModal() }, [])
+  const canShare = typeof navigator.share === 'function' && navigator.canShare?.({ files: [image.file] })
+  async function share() {
+    setError('')
+    try { await navigator.share({ files: [image.file] }) }
+    catch (cause) { if (cause?.name !== 'AbortError') setError('공유하지 못했어요. 이미지를 길게 눌러 저장해주세요.') }
+  }
+  return <dialog ref={dialog} className="photo-preview saved-image" aria-label="저장할 이미지"
+    onCancel={onClose} onClick={event => { if (event.target === event.currentTarget) onClose() }}>
+    <div className="photo-preview-content">
+      <button className="preview-close" type="button" onClick={onClose} aria-label="닫기">×</button>
+      <img src={image.url} alt="꾸민 빼빼로 이미지" />
+      {canShare && <button className="save-button" type="button" onClick={share} autoFocus>사진에 저장하기</button>}
+      <p className="saved-image-help">{canShare ? "'이미지 저장'을 누르면 사진 앱에 들어가요. " : ''}이미지를 길게 눌러 저장할 수도 있어요.</p>
+      <p className="save-error" role="status">{error}</p>
+    </div>
+  </dialog>
+}
+
 export default function App() {
   const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight })
   const [password, setPassword] = useState('')
@@ -241,6 +268,7 @@ export default function App() {
   const [preview, setPreview] = useState(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [savedImage, setSavedImage] = useState(null)
   const giftCanvas = useRef(null)
 
   // 고객 사이트: 잠금 화면 힌트를 받고, 이미 연 적이 있으면 바로 엽니다.
@@ -311,13 +339,19 @@ export default function App() {
     try {
       await document.fonts.ready
       await Promise.all([...giftCanvas.current.querySelectorAll('img')].map(image => image.decode()))
-      const blob = await toBlob(giftCanvas.current, {
+      const options = {
         width, height: decorationHeight, pixelRatio: 2, backgroundColor: '#fff',
         style: { transform: 'none', height: `${decorationHeight}px`, overflow: 'hidden' },
         filter: node => !(node instanceof HTMLElement && node.hasAttribute('data-export-exclude')),
-      })
+      }
+      if (SAFARI) await toBlob(giftCanvas.current, options)
+      const blob = await toBlob(giftCanvas.current, options)
       if (!blob) throw new Error('이미지 생성 실패')
       const url = URL.createObjectURL(blob)
+      if (IOS) {
+        setSavedImage({ url, file: new File([blob], 'pepero-decoration.png', { type: 'image/png' }) })
+        return
+      }
       const link = document.createElement('a')
       link.href = url
       link.download = 'pepero-decoration.png'
@@ -348,5 +382,6 @@ export default function App() {
     </main>
     {PREVIEW_TOKEN && <p className="admin-preview-banner" role="status">관리자 미리보기 · 고객에게는 비밀번호 화면부터 보여요{error ? ` · ${error}` : ''}</p>}
     {preview && <PhotoPreview src={preview} onClose={() => setPreview(null)} />}
+    {savedImage && <SavedImage image={savedImage} onClose={() => { URL.revokeObjectURL(savedImage.url); setSavedImage(null) }} />}
   </PhotoPreviewContext.Provider></GiftContext.Provider>
 }
