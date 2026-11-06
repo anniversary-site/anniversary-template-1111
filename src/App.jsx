@@ -245,15 +245,15 @@ function SavedImage({ image, onClose }) {
   async function share() {
     setError('')
     try { await navigator.share({ files: [image.file] }) }
-    catch (cause) { if (cause?.name !== 'AbortError') setError('공유하지 못했어요. 이미지를 길게 눌러 저장해주세요.') }
+    catch (cause) { if (cause?.name !== 'AbortError') setError(`앨범에 저장하지 못했어요(${cause?.name ?? '오류'}). 이미지를 길게 눌러 저장해주세요.`) }
   }
   return <dialog ref={dialog} className="photo-preview saved-image" aria-label="저장할 이미지"
     onCancel={onClose} onClick={event => { if (event.target === event.currentTarget) onClose() }}>
     <div className="photo-preview-content">
       <button className="preview-close" type="button" onClick={onClose} aria-label="닫기">×</button>
       <img src={image.url} alt="꾸민 빼빼로 이미지" />
-      {canShare && <button className="save-button" type="button" onClick={share} autoFocus>사진에 저장하기</button>}
-      <p className="saved-image-help">{canShare ? "'이미지 저장'을 누르면 사진 앱에 들어가요. " : ''}이미지를 길게 눌러 저장할 수도 있어요.</p>
+      {canShare && <button className="save-button" type="button" onClick={share} autoFocus>앨범에 저장하기</button>}
+      <p className="saved-image-help">{canShare ? "'앨범에 저장하기'를 누른 뒤 뜨는 메뉴에서 '이미지 저장'을 골라주세요. " : ''}이미지를 길게 눌러 '사진 앱에 저장'할 수도 있어요.</p>
       <p className="save-error" role="status">{error}</p>
     </div>
   </dialog>
