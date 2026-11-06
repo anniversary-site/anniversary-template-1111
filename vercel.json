@@ -1,6 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    { "source": "/:siteKey([a-km-np-z2-9]{12})", "destination": "/index.html" }
+    {
+      "source": "/media/:path*",
+      "destination": "https://d15bqt99r6ap9a.cloudfront.net/:path*"
+    },
+    {
+      "source": "/:siteKey([a-km-np-z2-9]{12})",
+      "destination": "/index.html"
+    }
   ]
 }

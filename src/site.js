@@ -5,6 +5,15 @@
 const API_URL = (import.meta.env.VITE_API_URL ?? 'https://dh7rgee1s6v8m.cloudfront.net/api/v1').replace(/\/+$/, '')
 const SITE_KEY = /^[a-km-np-z2-9]{12}$/
 
+// 고객 사진은 같은 사이트 주소(/media/…, vercel.json이 사진 CloudFront로 전달)로 불러옵니다.
+// 다른 주소에서 불러오면 CORS가 필요한데, CloudFront가 크롬 요청(priority 헤더)에는 허용 헤더를 빼먹어서
+// 사진이 깨지고 저장하기(html-to-image)도 실패했습니다. 로컬 개발(localhost)은 원래 주소 그대로 씁니다.
+const MEDIA_HOST = 'https://d15bqt99r6ap9a.cloudfront.net/'
+export function sameOriginMedia(url, location = window.location) {
+  if (!url || !url.startsWith(MEDIA_HOST) || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return url
+  return `${location.origin}/media/${url.slice(MEDIA_HOST.length)}`
+}
+
 export function siteKeyFromLocation(location = window.location) {
   const last = location.pathname.split('/').filter(Boolean).pop()
   if (SITE_KEY.test(last ?? '')) return last
@@ -125,10 +134,10 @@ export function toGift(content, frames, slots = 8, seed = '') {
     .sort((a, b) => a.documentNo - b.documentNo || a.slot - b.slot)
   return {
     message: content.mainText ?? '',
-    photos: fillSlots(photos, slots, seed).map(photo => ({ photo: photo.url ?? '', caption: photo.caption ?? '' })),
+    photos: fillSlots(photos, slots, seed).map(photo => ({ photo: sameOriginMedia(photo.url ?? ''), caption: photo.caption ?? '' })),
     photoTypes: frames.map((frame, index) => {
       const photo = photos.length ? photos[index % photos.length] : null
-      return { frame, photo: photo?.url ?? '', caption: photo?.caption ?? '' }
+      return { frame, photo: sameOriginMedia(photo?.url ?? ''), caption: photo?.caption ?? '' }
     }),
   }
 }
