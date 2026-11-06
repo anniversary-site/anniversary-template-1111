@@ -261,9 +261,9 @@ function SavedImage({ image, onClose }) {
   </dialog>
 }
 
-// 모바일 선물 화면에서 잘라 낼 위·아래 여백(디자인 기준 px). 위쪽은 문구 위 빈 공간, 아래쪽은 버튼 아래 여백입니다.
-const MOBILE_CROP_TOP = 110
-const MOBILE_CROP_BOTTOM = 20
+// 모바일에서 잘라 낼 위·아래 여백(디자인 기준 px). 선물 화면은 문구 위 빈 공간·버튼 아래 여백,
+// 비밀번호 화면은 집 그림 위 빈 공간입니다. 남은 부분을 화면 높이에 맞춰 줄이고 가운데에 둡니다.
+const MOBILE_CROP = { gift: [110, 20], login: [200, 0] }
 
 export default function App() {
   const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight })
@@ -314,11 +314,11 @@ export default function App() {
   // 맛 선택 위 경계를 사진 이동과 이미지 저장에 공통으로 사용합니다.
   const decorationHeight = mobile ? 763 : 927
   const totalHeight = height + (unlocked && gift ? 90 : 0)
-  // 모바일 선물 화면: 위쪽 빈 공간을 잘라 내고 화면 높이에 맞춰 줄여서 스크롤 없이 한 화면에 보여 줍니다.
-  const fitMobile = mobile && unlocked && gift
-  const cropTop = fitMobile ? MOBILE_CROP_TOP : 0
-  const visibleHeight = totalHeight - cropTop - (fitMobile ? MOBILE_CROP_BOTTOM : 0)
-  const scale = mobile && !fitMobile ? viewport.width / width : Math.min(viewport.width / width, viewport.height / visibleHeight)
+  // 모바일: 위·아래 빈 공간을 잘라 내고 화면 높이에 맞춰 줄여서 스크롤 없이 한 화면에 보여 줍니다.
+  const [cropTop, cropBottom] = mobile ? MOBILE_CROP[unlocked && gift ? 'gift' : 'login'] : [0, 0]
+  const visibleHeight = totalHeight - cropTop - cropBottom
+  const scale = Math.min(viewport.width / width, viewport.height / visibleHeight)
+  const offsetY = mobile ? Math.max(0, (viewport.height - visibleHeight * scale) / 2) : 0
 
   function wrongPassword() { setPassword(''); setError('비밀번호가 달라요. 다시 입력해주세요.') }
   async function check(value) {
@@ -389,7 +389,7 @@ export default function App() {
   return <GiftContext.Provider value={gift ?? DEMO_GIFT}><PhotoPreviewContext.Provider value={setPreview}>
     <main className="viewport" style={{ minHeight: Math.max(viewport.height, visibleHeight * scale) }}>
       <p id="decoration-help" className="sr-only">사진을 드래그해서 빼빼로를 꾸며보세요. 우클릭 또는 두 번 탭하면 크게 볼 수 있습니다. 방향키로 이동하고 Enter로 크게 볼 수도 있습니다.</p>
-      <div className="stage" style={{ width, height: totalHeight, top: -cropTop * scale, left: (viewport.width - width * scale) / 2, transform: `scale(${scale})` }}>
+      <div className="stage" style={{ width, height: totalHeight, top: offsetY - cropTop * scale, left: (viewport.width - width * scale) / 2, transform: `scale(${scale})` }}>
         <div ref={giftCanvas} className="gift-canvas" data-decoration-height={decorationHeight} style={{ width, height }}>
           <Screen mobile={mobile} password={password} error={error} onPasswordChange={onPasswordChange}
             onSubmit={event => { event.preventDefault(); check(password) }} flavor={flavor} setFlavor={setFlavor} hint={hint}
